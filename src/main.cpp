@@ -2,6 +2,7 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include "imgui.h"
+#include "imgui_internal.h"
 #include "imgui_impl_sdl.h"
 #include "imgui_impl_opengl3.h"
 #include <stdio.h>
@@ -9,73 +10,65 @@
 #include <GL/glew.h>     
 #include <iostream>
 #include <vector>
+#include <thread>
+#include <chrono>
+#include <fstream>
+#include "fileHandler.hpp"
+#include "window.hpp"
 using namespace cv;
 
 #include "vendor/opencvtosdl.hpp" 
+bool saved =  false;
+
+bool saveConfig(Mat& CamMat, Mat& distCoeffs, Mat& newCamMat, std::string filepath){
+    if(!saved){
+        FileStorage fs(filepath, FileStorage::WRITE);
+        fs << "cameraMatrix" << CamMat << "distCoeffs" << distCoeffs;
+        fs.release();
+        saved = true;
+    }
+}
+
+void getCornerPositions(Size gridsize, float squareSize, std::vector<Point3f>& corners, int mode ){
+    corners.clear();
+
+    switch(mode){
+        case 0:
+        case 2:
+            for( int i = 0; i < gridsize.height; ++i )
+                for( int j = 0; j < gridsize.width; ++j )
+                    corners.push_back(Point3f(float( j*squareSize ), float( i*squareSize ), 0));
+            break;
+
+        case 1:
+            for( int i = 0; i < gridsize.height; i++ )
+                for( int j = 0; j < gridsize.width; j++ )
+                    corners.push_back(Point3f(float((2*j + i % 2)*squareSize), float(i*squareSize), 0));
+            break;
+
+        default:
+            break;
+    }
+}
 
 int main(int argc, char *argv[])
 {
-    // Setup SDL
-    if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_TIMER) != 0)
-    {
-     printf("Error: %s\n", SDL_GetError());
-     return -1;
-    }
 
-    #if __APPLE__
-        // GL 3.2 Core + GLSL 150
-        const char* glsl_version = "#version 150";
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG); // Always required on Mac
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
-    #else
-        // GL 3.0 + GLSL 130
-        const char* glsl_version = "#version 130";
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
-    #endif
-        // Create window with graphics context
-        SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-        SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-        SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
-        SDL_DisplayMode current;
-        SDL_GetCurrentDisplayMode(0, &current);
-        SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
-        SDL_Window* window = SDL_CreateWindow("Camera Calibration", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags);
-        SDL_GLContext gl_context = SDL_GL_CreateContext(window);
-        SDL_Renderer *renderer = SDL_CreateRenderer( window, -1, SDL_RENDERER_ACCELERATED);
-        SDL_GL_SetSwapInterval(1); // Enable vsync
+    
+    Window window;
+   
 
-    if (glewInit() != GLEW_OK)
-    {
-        fprintf(stderr, "Failed to initialize OpenGL loader!\n");
-        return 1;
-    }
+   
+    
 
-    // Setup Dear ImGui context
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
+    
 
-    // Setup Dear ImGui style
-    ImGui::StyleColorsDark();
-    //ImGui::StyleColorsClassic();
-
-    // Setup Platform/Renderer bindings
-    ImGui_ImplSDL2_InitForOpenGL(window, gl_context);
-    ImGui_ImplOpenGL3_Init(glsl_version);
-
-  
-    bool show_demo_window = true;
-    bool show_another_window = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
     bool done = false;
-    bool KEYS[322]; 
+    bool KEYS[322];
+    for(int i = 0; i<322; ++i)
+        KEYS[i] = false;
     while (!done)
     {
        
@@ -85,7 +78,7 @@ int main(int argc, char *argv[])
             ImGui_ImplSDL2_ProcessEvent(&event);
             if (event.type == SDL_QUIT)
                 done = true;
-            if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
+            if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window.GetWindow()))
                 done = true;
             if (event.type == SDL_KEYDOWN)
                 KEYS[event.key.keysym.sym] = true;
@@ -94,9 +87,7 @@ int main(int argc, char *argv[])
         }
 
         // Start the Dear ImGui frame
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplSDL2_NewFrame(window);
-        ImGui::NewFrame();
+        window.ImguiNewFrame();
 
         static int cameraIndex = 0;
         static int oldIndex = 0;
@@ -110,11 +101,13 @@ int main(int argc, char *argv[])
         static bool found = false;
         static bool Failed =  false;
         static bool changedMode = false;
+        static float realsize = 1.0f;
         static std::vector<std::vector<Point2f>> FinalCorners;
+        static bool showcorrected = false;
+        static bool savefilebtn = false;
+        static bool savefile = false;
 
         //imgui stuff 
-        if (show_demo_window)
-            ImGui::ShowDemoWindow(&show_demo_window);
 
         {
            
@@ -146,9 +139,24 @@ int main(int argc, char *argv[])
 
             ImGui::TextColored(textcolor, "Grid size:");
             ImGui::SliderInt2("Default=9x6", gridsize, 1, 20);
+
+            ImGui::TextColored(textcolor, "Show corrected preview(cpu intense):");
+            ImGui::Checkbox("Default=False", &showcorrected);
                       
             ImGui::TextColored(textcolor, "Name of config file to save:");
             ImGui::InputText("Default=config.json",savepath, 256);
+
+            if (!savefilebtn){
+                ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+                ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
+            }
+            if(ImGui::Button("Save", ImVec2(40, 20))){
+                savefile = true;
+            }
+            if (!savefilebtn){
+            ImGui::PopItemFlag();
+            ImGui::PopStyleVar();
+            }
             
             ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 0.0f), "#");
             ImGui::TextColored(textcolor, "Press SPACE to capture a frame.");
@@ -174,11 +182,6 @@ int main(int argc, char *argv[])
                 ImGui::EndPopup();
             }
 
-
-
-
-            ImGui::Checkbox("Demo Window", &show_demo_window);      
-
             ImGui::End();
         }
 
@@ -193,8 +196,8 @@ int main(int argc, char *argv[])
             oldIndex = cameraIndex;
         }
             
-        SDL_Texture* texture;
-        SDL_Rect texture_rect;
+        SDL_Texture* texture, *texture2;
+        SDL_Rect texture_rect, texture_rect2;
         texture_rect.x = 0;  //the x coordinate
         texture_rect.y = 0; // the y coordinate
         found = false;
@@ -202,13 +205,10 @@ int main(int argc, char *argv[])
        
 
         if(cap.isOpened()){
-            Mat frame, gray;
+            Mat frame, gray, correctedframe;
             cap >> frame;
 
-            
-
-            if(KEYS[SDLK_SPACE]){ //capture frame 
-                
+            if(KEYS[SDLK_SPACE] && captureNumber > 0){ //capture frame 
                 cvtColor(frame, gray, CV_BGR2GRAY);
                 std::vector<Point2f> corners;
                 Size patternsize(gridsize[0],gridsize[1]);
@@ -269,26 +269,58 @@ int main(int argc, char *argv[])
                 }
                 
                 Failed = !found;
+            }else if(captureNumber == 0){
+                static bool calculated = false;
+                static Size patternsize(gridsize[0],gridsize[1]);
+                Mat cameraMatrix, distCoeffs, newCamMat;
+                if(savefile || !calculated){
+                    cameraMatrix = Mat::eye(3, 3, CV_64F);
+                    distCoeffs = Mat::zeros(8, 1, CV_64F);
+                    std::vector<Mat> rvecs, tvecs;
+                    std::vector<std::vector<Point3f>> objectPoints(1);
+                    getCornerPositions(patternsize, realsize, objectPoints[0], mode);
+                    objectPoints.resize(FinalCorners.size(),objectPoints[0]);
+                    Size imsize;
+                    imsize.height = frame.rows;
+                    imsize.width = frame.cols;
+                    double rms = calibrateCamera(objectPoints, FinalCorners, imsize, cameraMatrix,distCoeffs, rvecs, tvecs, CV_CALIB_FIX_K4|CV_CALIB_FIX_K5);
+                    newCamMat = getOptimalNewCameraMatrix(cameraMatrix, distCoeffs, imsize, 1.0f, imsize);
+                    calculated = true;
+                    savefilebtn = true;
+                }
+                if(savefile){
+                    saveConfig(cameraMatrix, distCoeffs, newCamMat, savepath);
+                    savefile = false;
+                }
+                if(showcorrected)
+                    undistort(frame, correctedframe, cameraMatrix, distCoeffs, newCamMat);
             }
 
-        if(changedMode){ //check for calibration mode change
+            if(changedMode){ //check for calibration mode change
                 captureNumber = 20;
                 FinalCorners.clear();
+                savefilebtn = false;
+                saved = false;
                 changedMode = false;
-        }
-            
-
-
-   
-
-            
-                
+            }    
 
             texture_rect.w = frame.size[1]; //the width of the texture
             texture_rect.h = frame.size[0]; //the height of the texture
             SDL_Surface* surface =  convertCV_MatToSDL_Surface(frame);
-            texture = SDL_CreateTextureFromSurface(renderer, surface);
+            texture = SDL_CreateTextureFromSurface(window.GetRenderer(), surface);
             SDL_FreeSurface(surface);
+
+            texture_rect2.x = texture_rect.w;
+            texture_rect2.y = 0;
+            texture_rect2.w = correctedframe.size[1]; //the width of the texture
+            texture_rect2.h = correctedframe.size[0]; //the height of the texture
+            if(showcorrected){
+                SDL_Surface* surface2 = convertCV_MatToSDL_Surface(correctedframe);
+                texture2 = SDL_CreateTextureFromSurface(window.GetRenderer(), surface2);
+                SDL_FreeSurface(surface2);
+            }
+
+
 
     
         }else{
@@ -297,17 +329,19 @@ int main(int argc, char *argv[])
         } 
         // Rendering
         ImGui::Render();
-        SDL_GL_MakeCurrent(window, gl_context);
-        glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
+        SDL_GL_MakeCurrent(window.GetWindow(), window.GetGLContext());
+        glViewport(0, 0, (int)window.GetImGuiIO().DisplaySize.x, (int)window.GetImGuiIO().DisplaySize.y);
         glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT);
-        SDL_RenderCopy(renderer, texture, NULL, &texture_rect);
+        SDL_RenderCopy(window.GetRenderer(), texture, NULL, &texture_rect);
+        SDL_RenderCopy(window.GetRenderer(), texture2, NULL, &texture_rect2);
         SDL_DestroyTexture(texture);
+        SDL_DestroyTexture(texture2);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-        SDL_GL_SwapWindow(window);
+        SDL_GL_SwapWindow(window.GetWindow());
 
         if(found){
-            //waitKey(1000);
+            std::this_thread::sleep_for(std::chrono::milliseconds(600));
         }
     }
 
@@ -316,8 +350,8 @@ int main(int argc, char *argv[])
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
 
-    SDL_GL_DeleteContext(gl_context);
-    SDL_DestroyWindow(window);
+    SDL_GL_DeleteContext(window.GetGLContext());
+    SDL_DestroyWindow(window.GetWindow());
     SDL_Quit();
 
   return 0;

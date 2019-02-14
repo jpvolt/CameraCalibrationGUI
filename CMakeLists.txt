@@ -13,8 +13,13 @@ file(GLOB src_imgui
     "src/vendor/imgui/*.cpp"
     
 )
+file(GLOB src_files
+    "src/*.hpp"
+    "src/*.cpp"
+    
+)
 
 add_executable( DistortionCorrection 
-src/main.cpp
+${src_files}
 ${src_imgui})
 target_link_libraries( DistortionCorrection  ${OpenCV_LIBS} SDL2main SDL2 glew)

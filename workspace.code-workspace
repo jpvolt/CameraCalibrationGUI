@@ -2,6 +2,12 @@
 	"folders": [
 		{
 			"path": "src"
+		},
+		{
+			"path": "build"
+		},
+		{
+			"path": "."
 		}
 	],
 	"settings": {
@@ -51,7 +57,10 @@
 			"type_traits": "cpp",
 			"tuple": "cpp",
 			"typeinfo": "cpp",
-			"utility": "cpp"
+			"utility": "cpp",
+			"forward_list": "cpp",
+			"numeric": "cpp",
+			"valarray": "cpp"
 		}
 	}
 }
