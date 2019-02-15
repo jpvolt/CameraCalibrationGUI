@@ -56,6 +56,7 @@ int main(int argc, char *argv[])
 
     
     Window window;
+    SDL_Renderer* renderer = window.GetRenderer();
    
 
    
@@ -111,7 +112,7 @@ int main(int argc, char *argv[])
 
         {
            
-            static ImVec4 textcolor = { 1.0f,1.0f,1.0f,1.0f };
+            static ImVec4 textcolor = { 0.0f,0.0f,0.0f,1.0f };
             ImGui::Begin("Menu");                         
 
             ImGui::TextColored(ImVec4(0.8f, 1.0f, 1.0f, 1.0f),"Welcome to this Camera distortion calibration software!");
@@ -333,8 +334,8 @@ int main(int argc, char *argv[])
         glViewport(0, 0, (int)window.GetImGuiIO().DisplaySize.x, (int)window.GetImGuiIO().DisplaySize.y);
         glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT);
-        SDL_RenderCopy(window.GetRenderer(), texture, NULL, &texture_rect);
-        SDL_RenderCopy(window.GetRenderer(), texture2, NULL, &texture_rect2);
+        SDL_RenderCopy(renderer, texture, NULL, &texture_rect);
+        SDL_RenderCopy(renderer, texture2, NULL, &texture_rect2);
         SDL_DestroyTexture(texture);
         SDL_DestroyTexture(texture2);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

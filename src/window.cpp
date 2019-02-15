@@ -44,9 +44,10 @@ Window::Window(){
             // Setup Dear ImGui context
             IMGUI_CHECKVERSION();
             ImGui::CreateContext();
-            ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
+            //ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
             //ImGui::StyleColorsDark();
-            ImGui::StyleColorsClassic();
+            //ImGui::StyleColorsClassic();
+            ImGui::StyleColorsLight();
 
             // Setup Platform/Renderer bindings
             ImGui_ImplSDL2_InitForOpenGL(window, gl_context);
