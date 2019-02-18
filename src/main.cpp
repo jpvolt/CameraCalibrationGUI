@@ -20,6 +20,7 @@ using namespace cv;
 #include "vendor/opencvtosdl.hpp" 
 bool saved =  false;
 bool inputEnabled = true;
+bool end = false;
 
 bool saveConfig(Mat& CamMat, Mat& distCoeffs, Mat& newCamMat, std::string filepath){
     static bool s = true;
@@ -29,6 +30,7 @@ bool saveConfig(Mat& CamMat, Mat& distCoeffs, Mat& newCamMat, std::string filepa
         fs.release();
         saved = true;
         s = false;
+        end = true;
     }
 }
 
@@ -154,8 +156,14 @@ int main(int argc, char *argv[])
                 ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
                 ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
             }
+            if(!end){
             if(ImGui::Button("Save", ImVec2(40, 20))){
                 savefile = true;
+            }
+            }else{
+             if(ImGui::Button("Exit", ImVec2(40, 20))){
+                return 0;
+            }      
             }
             if (!savefilebtn){
             ImGui::PopItemFlag();
