@@ -19,13 +19,16 @@ using namespace cv;
 
 #include "vendor/opencvtosdl.hpp" 
 bool saved =  false;
+bool inputEnabled = true;
 
 bool saveConfig(Mat& CamMat, Mat& distCoeffs, Mat& newCamMat, std::string filepath){
-    if(!saved){
+    static bool s = true;
+    if(s){
         FileStorage fs(filepath, FileStorage::WRITE);
         fs << "cameraMatrix" << CamMat << "distCoeffs" << distCoeffs;
         fs.release();
         saved = true;
+        s = false;
     }
 }
 
@@ -109,7 +112,7 @@ int main(int argc, char *argv[])
         static bool savefile = false;
 
         //imgui stuff 
-
+        inputEnabled = true;
         {
            
             static ImVec4 textcolor = { 0.0f,0.0f,0.0f,1.0f };
@@ -177,11 +180,27 @@ int main(int argc, char *argv[])
             bool open = true;
             if (ImGui::BeginPopupModal("Failed to find pattern!", &open))
             {
+                inputEnabled = false;
                 ImGui::Text("Failed to find a pattern! check if the pattern is visible and for possible errors in pattern settings on the menu.");
                 if (ImGui::Button("Close"))
                     ImGui::CloseCurrentPopup();
                 ImGui::EndPopup();
             }
+
+            if (saved){
+                 ImGui::OpenPopup("Config file saved!");
+                 saved = false;
+            }
+            bool open2 = true;
+            if (ImGui::BeginPopupModal("Config file saved!", &open2))
+            {
+                inputEnabled = false;
+                ImGui::Text("Config file saved! check out https://github.com/jpvolt/CameraCalibrationGUI for usage details.");
+                if (ImGui::Button("Close"))
+                    ImGui::CloseCurrentPopup();
+                ImGui::EndPopup();
+            }
+            
 
             ImGui::End();
         }
@@ -209,7 +228,7 @@ int main(int argc, char *argv[])
             Mat frame, gray, correctedframe;
             cap >> frame;
 
-            if(KEYS[SDLK_SPACE] && captureNumber > 0){ //capture frame 
+            if(KEYS[SDLK_SPACE] && captureNumber > 0 && inputEnabled){ //capture frame 
                 cvtColor(frame, gray, CV_BGR2GRAY);
                 std::vector<Point2f> corners;
                 Size patternsize(gridsize[0],gridsize[1]);
