@@ -18,6 +18,7 @@ class Window{
 
     public:
     Window();
+    ~Window();
     void ImguiNewFrame();
     SDL_Renderer* GetRenderer();
     SDL_Window* GetWindow();

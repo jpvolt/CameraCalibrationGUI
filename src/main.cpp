@@ -13,7 +13,6 @@
 #include <thread>
 #include <chrono>
 #include <fstream>
-#include "fileHandler.hpp"
 #include "window.hpp"
 using namespace cv;
 
@@ -58,26 +57,18 @@ void getCornerPositions(Size gridsize, float squareSize, std::vector<Point3f>& c
 
 int main(int argc, char *argv[])
 {
-
-    
     Window window;
     SDL_Renderer* renderer = window.GetRenderer();
    
-
-   
-    
-
-    
-
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
     bool done = false;
     bool KEYS[322];
     for(int i = 0; i<322; ++i)
         KEYS[i] = false;
+    
     while (!done)
-    {
-       
+    {   
         SDL_Event event;
         while (SDL_PollEvent(&event))
         {
@@ -93,9 +84,6 @@ int main(int argc, char *argv[])
                 if(event.key.keysym.sym <=322)
                     KEYS[event.key.keysym.sym] = false;
         }
-
-        // Start the Dear ImGui frame
-        window.ImguiNewFrame();
 
         static int cameraIndex = 0;
         static int oldIndex = 0;
@@ -116,6 +104,7 @@ int main(int argc, char *argv[])
         static bool savefile = false;
 
         //imgui stuff 
+        window.ImguiNewFrame();
         inputEnabled = true;
         {
            
@@ -163,13 +152,14 @@ int main(int argc, char *argv[])
                 savefile = true;
             }
             }else{
-             if(ImGui::Button("Exit", ImVec2(40, 20))){
-                return 0;
-            }      
+                if(ImGui::Button("Exit", ImVec2(40, 20))){
+                    return 0;
+                }      
             }
+
             if (!savefilebtn){
-            ImGui::PopItemFlag();
-            ImGui::PopStyleVar();
+                ImGui::PopItemFlag();
+                ImGui::PopStyleVar();
             }
             
             ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 0.0f), "#");
@@ -181,7 +171,7 @@ int main(int argc, char *argv[])
             ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 0.0f), "#");
             ImGui::Text("Application FPS: (%.1f FPS)",  ImGui::GetIO().Framerate);
 
-             if (Failed){
+            if (Failed){
                  ImGui::OpenPopup("Failed to find pattern!");
                  Failed = false;
              }
@@ -201,6 +191,7 @@ int main(int argc, char *argv[])
                  ImGui::OpenPopup("Config file saved!");
                  saved = false;
             }
+
             bool open2 = true;
             if (ImGui::BeginPopupModal("Config file saved!", &open2))
             {
@@ -211,12 +202,10 @@ int main(int argc, char *argv[])
                 ImGui::EndPopup();
             }
             
-
             ImGui::End();
         }
 
         //opencv stuff
-
 
 
         static VideoCapture cap(cameraIndex);
@@ -374,15 +363,6 @@ int main(int argc, char *argv[])
             std::this_thread::sleep_for(std::chrono::milliseconds(600));
         }
     }
-
-    // Cleanup
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplSDL2_Shutdown();
-    ImGui::DestroyContext();
-
-    SDL_GL_DeleteContext(window.GetGLContext());
-    SDL_DestroyWindow(window.GetWindow());
-    SDL_Quit();
 
   return 0;
 }
