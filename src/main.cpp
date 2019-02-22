@@ -17,7 +17,7 @@
 using namespace cv;
 
 #include "vendor/opencvtosdl.hpp" 
-bool saved =  false;
+bool saved = false;
 bool inputEnabled = true;
 bool end = false;
 

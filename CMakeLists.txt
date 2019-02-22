@@ -7,7 +7,7 @@ find_package( OpenCV REQUIRED )
 include_directories(src/vendor/imgui)
 include_directories(src/vendor/glew/include)
 add_subdirectory(src/vendor/glew/build/cmake)
-
+set(CMAKE_CXX_STANDARD 11)
 file(GLOB src_imgui
     "src/vendor/imgui/*.h"
     "src/vendor/imgui/*.cpp"
