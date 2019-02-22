@@ -1,7 +1,7 @@
 
 #include "window.hpp"
 
-Window::Window(int width,int height){
+Window::Window(){
     // Setup SDL
     if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_TIMER) != 0)
     {
