@@ -13,7 +13,7 @@ Camera calibration GUI util for opencv library [CameraCalibration](https://githu
  
  
  *Building:*
- *if on ubuntu:*
+ if on ubuntu:
  -`sudo apt install cmake libsdl2-dev g++`
  - `git clone https://github.com/jpvolt/CameraCalibrationGUI`
  - `cd CameraCalibrationGUI `
