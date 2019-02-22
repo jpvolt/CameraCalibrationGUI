@@ -22,4 +22,4 @@ file(GLOB src_files
 add_executable( DistortionCorrection 
 ${src_files}
 ${src_imgui})
-target_link_libraries( DistortionCorrection  ${OpenCV_LIBS} SDL2main SDL2 glew)
+target_link_libraries( DistortionCorrection  ${OpenCV_LIBS} SDL2 glew)
