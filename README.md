@@ -22,3 +22,9 @@ Camera calibration GUI util for opencv library [CameraCalibration](https://githu
  - `make -j4`
  - `./DistortionCorrection`
 
+
+*TODO*
+
+-MACOS support need diferent linkage of SDL2.
+-MACOS support need building through xcode
+-Improve building on Linux/MACOS - maybe install opencv/sdl2 automatically?
